@@ -3,6 +3,15 @@
 #include <QFileInfo>
 #include <QSet>
 
+void printError(const QString& message)
+{
+    QTextStream out(stdout);
+
+    out << "Error: "
+        << message
+        << "\n";
+}
+
 bool hasAllowedExtension(
     const QString& path,
     const QSet<QString>& allowedExtensions)
@@ -23,8 +32,9 @@ int main(int argc, char *argv[])
 
     if (argc != 4)
     {
-        out << "Usage:\n";
-        out << "program code.c vars.txt output.txt\n";
+        printError(
+            "Usage: program code.c vars.txt output.txt"
+        );
 
         return 1;
     }
@@ -48,7 +58,9 @@ int main(int argc, char *argv[])
             codeFilePath,
             codeExtensions))
     {
-        out << "Error: invalid code file extension\n";
+        printError(
+            "Invalid code file extension"
+        );
 
         return 1;
     }
@@ -57,7 +69,9 @@ int main(int argc, char *argv[])
             varsFilePath,
             textExtensions))
     {
-        out << "Error: invalid variables file extension\n";
+        printError(
+            "Invalid variables file extension"
+        );
 
         return 1;
     }
