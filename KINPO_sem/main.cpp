@@ -13,6 +13,76 @@ void printError(const QString& message)
         << "\n";
 }
 
+bool readCodeFile(
+    const QString& codePath,
+    QStringList& lines)
+{
+    QFile file(codePath);
+
+    if (!file.open(
+            QIODevice::ReadOnly |
+            QIODevice::Text))
+    {
+        printError(
+            "Cannot open code file"
+        );
+
+        return false;
+    }
+
+    QTextStream stream(&file);
+
+    int lineCount = 0;
+
+    while (!stream.atEnd())
+    {
+        QString line =
+            stream.readLine();
+
+        if (line.length() > 256)
+        {
+            printError(
+                "Line length exceeds 256 symbols"
+            );
+
+            return false;
+        }
+
+        if (line.contains("#define"))
+        {
+            printError(
+                "Source code contains #define"
+            );
+
+            return false;
+        }
+
+        lines.append(line);
+
+        lineCount++;
+
+        if (lineCount > 1000)
+        {
+            printError(
+                "File contains more than 1000 lines"
+            );
+
+            return false;
+        }
+    }
+
+    if (lines.isEmpty())
+    {
+        printError(
+            "Code file is empty"
+        );
+
+        return false;
+    }
+
+    return true;
+}
+
 bool hasAllowedExtension(
     const QString& path,
     const QSet<QString>& allowedExtensions)
@@ -118,7 +188,19 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    out << "Files accepted\n\n";
+    QStringList codeLines;
+
+    if (!readCodeFile(
+            codeFilePath,
+            codeLines))
+    {
+        return 1;
+    }
+
+    out << "Code file loaded\n";
+    out << "Lines count: "
+        << codeLines.size()
+        << "\n\n";
 
     out << "Code file: "
         << codeFilePath
