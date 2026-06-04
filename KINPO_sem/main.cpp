@@ -235,6 +235,91 @@ bool readVariablesFile(
     return true;
 }
 
+QString removeComments(const QString& text)
+{
+    QString result;
+
+    bool inSingleComment = false;
+    bool inMultiComment = false;
+
+    for (int i = 0; i < text.length(); i++)
+    {
+        if (!inSingleComment &&
+            !inMultiComment &&
+            i + 1 < text.length() &&
+            text[i] == '/' &&
+            text[i + 1] == '/')
+        {
+            inSingleComment = true;
+            i++;
+
+            continue;
+        }
+
+        if (!inSingleComment &&
+            !inMultiComment &&
+            i + 1 < text.length() &&
+            text[i] == '/' &&
+            text[i + 1] == '*')
+        {
+            inMultiComment = true;
+            i++;
+
+            continue;
+        }
+
+        if (inSingleComment &&
+            text[i] == '\n')
+        {
+            inSingleComment = false;
+
+            result += '\n';
+
+            continue;
+        }
+
+        if (inMultiComment &&
+            i + 1 < text.length() &&
+            text[i] == '*' &&
+            text[i + 1] == '/')
+        {
+            inMultiComment = false;
+            i++;
+
+            continue;
+        }
+
+        if (!inSingleComment &&
+            !inMultiComment)
+        {
+            result += text[i];
+        }
+    }
+
+    return result;
+}
+
+QStringList tokenizeCode(const QString& text)
+{
+    QString prepared = text;
+
+    QString separators =
+        "();,[]{}=+-*/<>!&|";
+
+    for (QChar ch : separators)
+    {
+        prepared.replace(
+            QString(ch),
+            " " + QString(ch) + " "
+        );
+    }
+
+    return prepared.split(
+        QRegularExpression("\\s+"),
+        QString::SkipEmptyParts
+    );
+}
+
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
@@ -305,6 +390,15 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    QString codeText =
+        codeLines.join("\n");
+
+    codeText =
+        removeComments(codeText);
+
+    QStringList tokens =
+        tokenizeCode(codeText);
+
     out << "Code file loaded\n";
     out << "Lines count: "
         << codeLines.size()
@@ -313,6 +407,10 @@ int main(int argc, char *argv[])
     out << "Variables loaded: "
         << varsList.size()
         << "\n\n";
+
+    out << "\nTokens count: "
+        << tokens.size()
+        << "\n";
 
     return 0;
 }
