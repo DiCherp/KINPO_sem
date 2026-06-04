@@ -2,6 +2,7 @@
 #include <QTextStream>
 #include <QFileInfo>
 #include <QSet>
+#include <QRegularExpression>
 
 void printError(const QString& message)
 {
@@ -22,6 +23,47 @@ bool hasAllowedExtension(
             .toLower();
 
     return allowedExtensions.contains(extension);
+}
+
+bool isType(const QString& word)
+{
+    static QSet<QString> types =
+    {
+        "int",
+        "float",
+        "char",
+        "double",
+        "bool"
+    };
+
+    return types.contains(word);
+}
+
+bool isKeyword(const QString& word)
+{
+    static QSet<QString> keywords =
+    {
+        "if",
+        "else",
+        "while",
+        "for",
+        "return",
+        "switch",
+        "case",
+        "break",
+        "continue"
+    };
+
+    return keywords.contains(word);
+}
+
+bool isValidVariableName(const QString& name)
+{
+    QRegularExpression regex(
+        "^[a-zA-Z_][a-zA-Z0-9_]*$"
+    );
+
+    return regex.match(name).hasMatch();
 }
 
 int main(int argc, char *argv[])
@@ -89,6 +131,8 @@ int main(int argc, char *argv[])
     out << "Output file: "
         << outputFilePath
         << "\n";
+
+    out << "\nValidation module loaded\n";
 
     return 0;
 }
