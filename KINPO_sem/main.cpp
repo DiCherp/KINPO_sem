@@ -83,6 +83,8 @@ bool readCodeFile(
     return true;
 }
 
+
+
 bool hasAllowedExtension(
     const QString& path,
     const QSet<QString>& allowedExtensions)
@@ -134,6 +136,103 @@ bool isValidVariableName(const QString& name)
     );
 
     return regex.match(name).hasMatch();
+}
+
+bool readVariablesFile(
+    const QString& varsPath,
+    QStringList& varsList)
+{
+    QFile file(varsPath);
+
+    if (!file.open(
+            QIODevice::ReadOnly |
+            QIODevice::Text))
+    {
+        printError(
+            "Cannot open variables file"
+        );
+
+        return false;
+    }
+
+    QTextStream stream(&file);
+
+    QSet<QString> uniqueVars;
+
+    while (!stream.atEnd())
+    {
+        QString var =
+            stream.readLine().trimmed();
+
+        if (var.isEmpty())
+        {
+            printError(
+                "Empty line found in variables file"
+            );
+
+            return false;
+        }
+
+        if (!isValidVariableName(var))
+        {
+            printError(
+                "Invalid variable name: " + var
+            );
+
+            return false;
+        }
+
+        if (isType(var))
+        {
+            printError(
+                "Variable name matches type: " + var
+            );
+
+            return false;
+        }
+
+        if (isKeyword(var))
+        {
+            printError(
+                "Variable name matches keyword: " + var
+            );
+
+            return false;
+        }
+
+        if (uniqueVars.contains(var))
+        {
+            printError(
+                "Duplicate variable: " + var
+            );
+
+            return false;
+        }
+
+        uniqueVars.insert(var);
+
+        varsList.append(var);
+
+        if (varsList.size() > 100)
+        {
+            printError(
+                "Too many variables"
+            );
+
+            return false;
+        }
+    }
+
+    if (varsList.isEmpty())
+    {
+        printError(
+            "Variables file is empty"
+        );
+
+        return false;
+    }
+
+    return true;
 }
 
 int main(int argc, char *argv[])
@@ -197,24 +296,23 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    QStringList varsList;
+
+    if (!readVariablesFile(
+            varsFilePath,
+            varsList))
+    {
+        return 1;
+    }
+
     out << "Code file loaded\n";
     out << "Lines count: "
         << codeLines.size()
+        << "\n";
+
+    out << "Variables loaded: "
+        << varsList.size()
         << "\n\n";
-
-    out << "Code file: "
-        << codeFilePath
-        << "\n";
-
-    out << "Variables file: "
-        << varsFilePath
-        << "\n";
-
-    out << "Output file: "
-        << outputFilePath
-        << "\n";
-
-    out << "\nValidation module loaded\n";
 
     return 0;
 }
