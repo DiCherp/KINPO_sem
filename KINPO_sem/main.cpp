@@ -335,9 +335,21 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+
+
+
     QString codeFilePath = argv[1];
     QString varsFilePath = argv[2];
     QString outputFilePath = argv[3];
+
+    QFile outFile(outputFilePath);
+        if (!outFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            printError("Неверно указан файл для выходных данных. Возможно, указанного расположения не существует или нет прав на запись.");
+            return 1;
+        }
+
+        // Закрываем файл, так как запись будет реализована в следующих коммитах
+        outFile.close();
 
     QSet<QString> codeExtensions =
     {
