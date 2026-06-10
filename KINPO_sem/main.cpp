@@ -411,6 +411,14 @@ int main(int argc, char *argv[])
     QStringList tokens =
         tokenizeCode(codeText);
 
+    QList<QPair<QString, bool>> results;
+
+    for (const QString& var : varsList) {
+        // Согласно спецификации, проверяем, есть ли переменная в коде
+        bool found = tokens.contains(var);
+        results.append(qMakePair(var, found));
+    }
+
     out << "Code file loaded\n";
     out << "Lines count: "
         << codeLines.size()
