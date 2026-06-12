@@ -370,56 +370,47 @@ QSet<QString> extractDeclaredVariables(const QStringList& tokens)
 
     while (i < tokens.size()) {
         if (isType(tokens[i])) {
-            // Пропускаем все модификаторы и составные типы (например, unsigned long int, struct Point)
             while (i < tokens.size() && isType(tokens[i])) {
                 if (tokens[i] == "struct" || tokens[i] == "enum" || tokens[i] == "union") {
-                    i++; // Пропускаем ключевое слово
+                    i++;
                     if (i < tokens.size() && isValidVariableName(tokens[i])) {
-                        i++; // Пропускаем имя тега (например, Point)
+                        i++;
                     }
-                    // Если сразу идет определение структуры {...}
                     if (i < tokens.size() && tokens[i] == "{") {
                         i = skipBalanced(tokens, i, "{", "}");
                     }
                 } else {
-                    i++; // Пропускаем обычный тип
+                    i++;
                 }
             }
 
-            // Теперь извлекаем имена переменных до конца выражения (до точки с запятой)
             while (i < tokens.size() && tokens[i] != ";") {
                 if (isValidVariableName(tokens[i]) && !isType(tokens[i]) && !isKeyword(tokens[i])) {
 
-                    // Проверка: не функция ли это? (в случае если токен это имя функции)
                     if (i + 1 < tokens.size() && tokens[i + 1] == "(") {
                         i = skipBalanced(tokens, i + 1, "(", ")");
                         continue;
                     }
 
-                    // Добавляем переменную в множество
                     declared.insert(tokens[i]);
                     i++;
 
-                    // Пропускаем размерности массивов
                     while (i < tokens.size() && tokens[i] == "[") {
                         i = skipBalanced(tokens, i, "[", "]");
                     }
 
-                    // Пропускаем инициализаторы
                     if (i < tokens.size() && tokens[i] == "=") {
                         i = skipInitializer(tokens, i + 1);
                     }
-
-                    // Если после переменной идет запятая, пропускаем ее к следующей переменной
                     if (i < tokens.size() && tokens[i] == ",") {
                         i++;
                     }
                 } else {
-                    i++; // Пропускаем неожиданные токены (например, *, &)
+                    i++;
                 }
             }
         }
-        i++; // Переходим к следующему токену или перешагиваем ';'
+        i++;
     }
 
     return declared;
@@ -479,16 +470,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // 1. Получаем список всех токенов из кода
     QStringList tokens = tokenizeCode(codeText);
 
-    // 2. Ищем все действительно ОБЪЯВЛЕННЫЕ переменные
     QSet<QString> declaredVars = extractDeclaredVariables(tokens);
 
-    // 3. Формируем результаты
     QList<QPair<QString, bool>> results;
     for (const QString& var : varsList) {
-        // Теперь мы проверяем наличие в множестве объявленных переменных, а не просто среди токенов
         bool found = declaredVars.contains(var);
         results.append(qMakePair(var, found));
     }
@@ -516,308 +503,218 @@ class TestAnalyzer : public QObject
 
 private slots:
     void testIsType() {
-        // 1. Проверка встроенного типа
         QCOMPARE(isType("int"), true);
 
-        // 2. Проверка модификатора типа
         QCOMPARE(isType("const"), true);
 
-        // 3. Проверка пользовательского слова
         QCOMPARE(isType("value"), false);
 
-        // 4. Проверка пользовательского идентификатора
         QCOMPARE(isType("count"), false);
 
-        // 5. Проверка float
         QCOMPARE(isType("float"), true);
-
-        // 6. Проверка char
         QCOMPARE(isType("char"), true);
 
-        // 7. Проверка double
         QCOMPARE(isType("double"), true);
 
-        // 8. Проверка signed
         QCOMPARE(isType("signed"), true);
 
-        // 9. Проверка unsigned
         QCOMPARE(isType("unsigned"), true);
 
-        // 10. Проверка struct
         QCOMPARE(isType("struct"), true);
 
-        // 11. Проверка enum
         QCOMPARE(isType("enum"), true);
 
-        // 12. Проверка union
         QCOMPARE(isType("union"), true);
 
-        // 13. Проверка пустой строки
         QCOMPARE(isType(""), false);
 
-        // 14. Проверка встроенного типа с заглавной буквы
         QCOMPARE(isType("Float"), false);
     }
 
-    // Тесты для функции isKeyword (Проверка, является ли слово ключевым словом языка С)
     void testIsKeyword() {
-        // 1. Проверка ключевого слова
         QCOMPARE(isKeyword("while"), true);
 
-        // 2. Проверка типа как ключевого слова
         QCOMPARE(isKeyword("int"), false);
 
-        // 3. Проверка обычного идентификатора
         QCOMPARE(isKeyword("counter"), false);
 
-        // 4. Проверка идентификатора с цифрой
         QCOMPARE(isKeyword("var1"), false);
 
-        // 5. Проверка идентификатора с подчёркиванием
         QCOMPARE(isKeyword("_name"), false);
 
-        // 6. Проверка пользовательского имени
         QCOMPARE(isKeyword("Point"), false);
     }
 
-    // Тесты для функции isValidVariableName (Проверка корректности имени переменной)
     void testIsValidVariableName() {
-        // 1. Корректное имя
         QCOMPARE(isValidVariableName("count"), true);
 
-        // 2. Имя начинается с цифры
         QCOMPARE(isValidVariableName("1value"), false);
 
-        // 3. Имя содержит недопустимый символ
         QCOMPARE(isValidVariableName("var-name"), false);
 
-        // 4. Имя содержит пробел
         QCOMPARE(isValidVariableName("my var"), false);
 
-        // 5. Имя с подчёркиванием в начале
-        // ВНИМАНИЕ: Функция вернет true, так как С это разрешает. Тест упадет.
         QCOMPARE(isValidVariableName("_count"), true);
 
-        // 6. Только цифры
         QCOMPARE(isValidVariableName("123"), false);
 
-        // 7. Имя с точкой
         QCOMPARE(isValidVariableName("a.b"), false);
 
-        // 8. Имя с кириллицей
         QCOMPARE(isValidVariableName("переменная"), false);
 
-        // 9. Однобуквенное имя
         QCOMPARE(isValidVariableName("x"), true);
 
-        // 10. Пустая строка
         QCOMPARE(isValidVariableName(""), false);
     }
 
-    // Тесты для функции removeComments (Удаление однострочных и многострочных комментариев)
     void testRemoveComments() {
-        // 1. Удаление однострочного комментария
-        // (Остается пробел перед началом комментария)
         QCOMPARE(removeComments("int a; // test"), QString("int a; "));
 
-        // 2. Удаление многострочного комментария (с переносом строки)
         QCOMPARE(removeComments("int a; /* test */\nint b;"), QString("int a; \nint b;"));
 
-        // 3. Комментарий в отдельной строке
         QCOMPARE(removeComments("// comment"), QString(""));
 
-        // 4. Комментарий после инициализации
         QCOMPARE(removeComments("int x = 5; // value"), QString("int x = 5; "));
 
-        // 5. Многострочный комментарий на нескольких строках
         QCOMPARE(removeComments("int a; /*x\ny*/ int b;"), QString("int a;  int b;"));
 
-        // 6. Комментарий в начале строки
         QCOMPARE(removeComments("// comment int a;"), QString(""));
 
-        // 7. Комментарий посреди инициализации
         QCOMPARE(removeComments("int a = /*5*/ 4;"), QString("int a =  4;"));
     }
 
-    // Тесты для функции tokenizeCode (Разбиение строки исходного кода на токены)
     void testTokenizeCode() {
-        // 1. Простое объявление
         QStringList exp1 = {"int", "a", ";"};
         QCOMPARE(tokenizeCode("int a;"), exp1);
 
-        // 2. Объявление с инициализацией
         QStringList exp2 = {"int", "x", "=", "5", ";"};
         QCOMPARE(tokenizeCode("int x = 5;"), exp2);
 
-        // 3. Массив
         QStringList exp3 = {"int", "arr", "[", "10", "]", ";"};
         QCOMPARE(tokenizeCode("int arr[10];"), exp3);
 
-        // 4. Объявление структуры
         QStringList exp4 = {"struct", "Point", "p", ";"};
         QCOMPARE(tokenizeCode("struct Point p;"), exp4);
 
-        // 5. Объявление signed переменной
         QStringList exp5 = {"signed", "char", "c", ";"};
         QCOMPARE(tokenizeCode("signed char c;"), exp5);
 
-        // 6. Инициализация с выражением
         QStringList exp6 = {"int", "x", "=", "a", "+", "2", ";"};
         QCOMPARE(tokenizeCode("int x = a + 2;"), exp6);
 
-        // 7. Несколько переменных
         QStringList exp7 = {"int", "a", ",", "b", ",", "c", ";"};
         QCOMPARE(tokenizeCode("int a, b, c;"), exp7);
 
-        // 8. Массив с инициализацией
         QStringList exp8 = {"int", "arr", "[", "3", "]", "=", "{", "1", ",", "2", ",", "3", "}", ";"};
         QCOMPARE(tokenizeCode("int arr[3] = {1,2,3};"), exp8);
 
-        // 9. Функция
+
         QStringList exp9 = {"void", "func", "(", ")", ";"};
         QCOMPARE(tokenizeCode("void func();"), exp9);
-
-        // 10. Сложное выражение
         QStringList exp10 = {"a1", "*", "(", "-", "2.5", "+", "b", ")", "^", "3", ";"};
         QCOMPARE(tokenizeCode("a1*(-2.5+b)^3;"), exp10);
 
-        // 11. Оператор сравнения
         QStringList exp11 = {"a", ">", "=", "b", ";"};
         QCOMPARE(tokenizeCode("a>=b;"), exp11);
 
-        // 12. Логический оператор
         QStringList exp12 = {"a", "&", "&", "b", ";"};
         QCOMPARE(tokenizeCode("a && b;"), exp12);
     }
 
-    // Тесты для функции skipBalanced (Пропуск сбалансированной группы скобок)
     void testSkipBalanced() {
-        // 1. Простая круглая скобка
         QStringList tok1 = {"(", "a", ")"};
         QCOMPARE(skipBalanced(tok1, 0, "(", ")"), 3);
 
-        // 2. Вложенные скобки
         QStringList tok2 = {"(", "(", "a", ")", ")"};
         QCOMPARE(skipBalanced(tok2, 0, "(", ")"), 5);
 
-        // 3. Пропуск квадратных скобок массива
         QStringList tok3 = {"[", "10", "]"};
         QCOMPARE(skipBalanced(tok3, 0, "[", "]"), 3);
-
-        // 4. Фигурные скобки
         QStringList tok4 = {"{", "a", "}", "b"};
         QCOMPARE(skipBalanced(tok4, 0, "{", "}"), 3);
 
-        // 5. Несколько элементов внутри скобок
         QStringList tok5 = {"(", "a", "+", "b", ")", "c"};
         QCOMPARE(skipBalanced(tok5, 0, "(", ")"), 5);
 
-        // 6. Скобки в конце последовательности (нет закрывающей скобки)
         QStringList tok6 = {"(", "a", "+", "b"};
         QCOMPARE(skipBalanced(tok6, 0, "(", ")"), 4); // размер списка = 4
 
-        // 7. Баланс внутри строки объявления
         QStringList tok7 = {"(", "a", "[", "3", "]", ")", ";"};
         QCOMPARE(skipBalanced(tok7, 0, "(", ")"), 6);
 
-        // 8. Одиночная открывающая скобка
         QStringList tok8 = {"("};
         QCOMPARE(skipBalanced(tok8, 0, "(", ")"), 1); // размер списка = 1
 
-        // 9. Массив с индексом-выражением
         QStringList tok9 = {"[", "a", "+", "1", "]", "b"};
         QCOMPARE(skipBalanced(tok9, 0, "[", "]"), 5);
 
-        // 10. Начальный индекс не равен нулю
         QStringList tok10 = {"x", "y", "(", "a", "+", "b", ")", "z"};
         QCOMPARE(skipBalanced(tok10, 2, "(", ")"), 7);
     }
 
-    // Тесты для функции skipInitializer (Пропуск инициализирующего выражения)
     void testSkipInitializer() {
-        // 1. Простая инициализация
         QStringList tok1 = {"5", ";"};
         QCOMPARE(skipInitializer(tok1, 0), 1);
 
-        // 2. Инициализация со скобками
         QStringList tok2 = {"(", "1", "+", "2", ")", ";"};
         QCOMPARE(skipInitializer(tok2, 0), 5);
 
-        // 3. Инициализация массива
         QStringList tok3 = {"{", "1", ",", "2", "}", ";"};
         QCOMPARE(skipInitializer(tok3, 0), 5);
 
-        // 4. Инициализация до запятой
         QStringList tok4 = {"5", ",", "b", "]"};
         QCOMPARE(skipInitializer(tok4, 0), 1);
 
-        // 5. Пустая инициализация
         QStringList tok5 = {";"};
         QCOMPARE(skipInitializer(tok5, 0), 0);
 
-        // 6. Инициализация с логическим оператором
         QStringList tok6 = {"a", "&&", "b", ";"};
         QCOMPARE(skipInitializer(tok6, 0), 3);
 
-        // 7. Инициализация массива с фигурными скобками
         QStringList tok7 = {"{", "{", "1", "}", ",", "{", "2", "}", "}", ";"};
         QCOMPARE(skipInitializer(tok7, 0), 9);
 
-        // 8. Инициализация сложного выражения
         QStringList tok8 = {"a", "+", "(", "b", "*", "c", ")", ";"};
         QCOMPARE(skipInitializer(tok8, 0), 7);
 
-        // 9. Инициализация до конца списка
         QStringList tok9 = {"5"};
         QCOMPARE(skipInitializer(tok9, 0), 1);
 
-        // 10. Инициализация с оператором сравнения
         QStringList tok10 = {"a", ">=", "b", ";"};
         QCOMPARE(skipInitializer(tok10, 0), 3);
     }
 
-    // Тесты для функции extractDeclaredVariables (Поиск объявленных переменных)
     void testExtractDeclaredVariables() {
-        // 1. Одна переменная
         QStringList tok1 = {"int", "a", ";"};
         QCOMPARE(extractDeclaredVariables(tok1), QSet<QString>({"a"}));
 
-        // 2. Несколько переменных
         QStringList tok2 = {"int", "a", ",", "b", ";"};
         QCOMPARE(extractDeclaredVariables(tok2), QSet<QString>({"a", "b"}));
 
-        // 3. Массив
         QStringList tok3 = {"int", "arr", "[", "10", "]", ";"};
         QCOMPARE(extractDeclaredVariables(tok3), QSet<QString>({"arr"}));
 
-        // 4. struct-переменная (пишем 'struct' так как C регистрозависим)
         QStringList tok4 = {"struct", "Point", "p", ";"};
         QCOMPARE(extractDeclaredVariables(tok4), QSet<QString>({"p"}));
 
-        // 5. enum-переменная
         QStringList tok5 = {"enum", "Color", "c", ";"};
         QCOMPARE(extractDeclaredVariables(tok5), QSet<QString>({"c"}));
 
-        // 6. union-переменная
         QStringList tok6 = {"union", "Data", "d", ";"};
         QCOMPARE(extractDeclaredVariables(tok6), QSet<QString>({"d"}));
 
-        // 7. Модификатор const
         QStringList tok7 = {"const", "int", "value", ";"};
         QCOMPARE(extractDeclaredVariables(tok7), QSet<QString>({"value"}));
 
-        // 8. Структура (вместе с ее внутренними переменными, которые мы должны проигнорировать)
         QStringList tok8 = {"struct", "Point", "{", "int", "a", ";", "int", "y", ";", "}", "p", ";"};
         QCOMPARE(extractDeclaredVariables(tok8), QSet<QString>({"p"}));
 
-        // 9. Длинное объявление
         QStringList tok9 = {"unsigned", "long", "int", "x", ";"};
         QCOMPARE(extractDeclaredVariables(tok9), QSet<QString>({"x"}));
     }
 };
 
-// Макрос, который генерирует функцию main() специально для тестов
 QTEST_MAIN(TestAnalyzer)
-#include "main.moc" // Обязательно для работы сигналов/слотов QObject в одном cpp файле
+#include "main.moc"
 
 #endif
