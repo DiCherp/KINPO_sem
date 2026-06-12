@@ -1,0 +1,4 @@
+arr
+result
+a
+c
